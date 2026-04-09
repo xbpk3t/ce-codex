@@ -1,0 +1,90 @@
+name: Update CE Codex Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: Upstream branch, tag, or commit to mirror
+        required: false
+        default: main
+  schedule:
+    - cron: "17 2 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ce-codex-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPO: EveryInc/compound-engineering-plugin
+
+    steps:
+      - name: Checkout mirror repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Checkout upstream source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ inputs.upstream_ref || 'main' }}
+          path: upstream
+
+      - name: Install upstream dependencies
+        working-directory: upstream
+        run: bun install --frozen-lockfile
+
+      - name: Generate Codex artifacts
+        env:
+          UPSTREAM_REF: ${{ inputs.upstream_ref || 'main' }}
+        run: |
+          export HOME="$RUNNER_TEMP/ce-codex-home"
+          rm -rf "$HOME"
+          mkdir -p "$HOME"
+
+          cd upstream
+          bun run src/index.ts install ./plugins/compound-engineering --to codex
+
+          test -d "$HOME/.codex/skills"
+          test -d "$HOME/.codex/prompts"
+
+          cd "$GITHUB_WORKSPACE"
+          rm -rf skills prompts
+          mkdir -p skills prompts
+          cp -R "$HOME/.codex/skills/." skills/
+          cp -R "$HOME/.codex/prompts/." prompts/
+
+          UPSTREAM_COMMIT="$(git -C upstream rev-parse HEAD)"
+          GENERATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+          cat > manifest.json <<EOF
+          {
+            "generator": "bun run src/index.ts install ./plugins/compound-engineering --to codex",
+            "generatedAt": "${GENERATED_AT}",
+            "upstreamRepo": "${UPSTREAM_REPO}",
+            "upstreamRef": "${UPSTREAM_REF}",
+            "upstreamCommit": "${UPSTREAM_COMMIT}"
+          }
+          EOF
+
+      - name: Commit changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skills prompts manifest.json
+          git commit -m "chore: update CE Codex artifacts"
+          git push
