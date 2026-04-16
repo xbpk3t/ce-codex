@@ -95,10 +95,10 @@ Key message types:
 
 Scripts:
 
-- `discover-sessions.sh` -- Discovers session files across all platforms. Handles directory structures, mtime filtering, repo-name matching, and zsh glob safety. Usage: `bash <script-dir>/prompts:discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor]`
-- `extract-metadata.py` -- Extracts session metadata. Batch mode: pass file paths as arguments. Pass `--cwd-filter <repo-name>` to filter Codex sessions at the script level. Usage: `bash <script-dir>/prompts:discover-sessions.sh <repo-name> <days> | tr '\n' '\0' | xargs -0 python3 <script-dir>/prompts:extract-metadata.py --cwd-filter <repo-name>`
-- `extract-skeleton.py` -- Extracts the conversation skeleton: user messages, assistant text, and collapsed tool call summaries. Filters out raw tool inputs/outputs, thinking/reasoning blocks, and framework wrapper tags. Usage: `cat <file> | python3 <script-dir>/prompts:extract-skeleton.py`
-- `extract-errors.py` -- Extracts error signals. Claude Code: tool results with `is_error`. Codex: commands with non-zero exit codes. Cursor: no error extraction possible. Usage: `cat <file> | python3 <script-dir>/prompts:extract-errors.py`
+- `discover-sessions.sh` -- Discovers session files across all platforms. Handles directory structures, mtime filtering, repo-name matching, and zsh glob safety. Usage: `bash <script-dir>/discover-sessions.sh <repo-name> <days> [--platform claude|codex|cursor]`
+- `extract-metadata.py` -- Extracts session metadata. Batch mode: pass file paths as arguments. Pass `--cwd-filter <repo-name>` to filter Codex sessions at the script level. Usage: `bash <script-dir>/discover-sessions.sh <repo-name> <days> | tr '\n' '\0' | xargs -0 python3 <script-dir>/extract-metadata.py --cwd-filter <repo-name>`
+- `extract-skeleton.py` -- Extracts the conversation skeleton: user messages, assistant text, and collapsed tool call summaries. Filters out raw tool inputs/outputs, thinking/reasoning blocks, and framework wrapper tags. Usage: `cat <file> | python3 <script-dir>/extract-skeleton.py`
+- `extract-errors.py` -- Extracts error signals. Claude Code: tool results with `is_error`. Codex: commands with non-zero exit codes. Cursor: no error extraction possible. Usage: `cat <file> | python3 <script-dir>/extract-errors.py`
 
 Python scripts output a `_meta` line at the end with `files_processed` and `parse_errors` counts. When `parse_errors > 0`, note in the response that extraction was partial.
 
@@ -118,13 +118,13 @@ Determine the scan window from the Time Range table above, then discover and ext
 **Discover session files using the discovery script.** `session-history-scripts/discover-sessions.sh` handles all platform-specific directory structures, mtime filtering, and zsh glob safety. Run it by path (do not read it into context):
 
 ```bash
-bash <script-dir>/prompts:discover-sessions.sh <repo-name> <days>
+bash <script-dir>/discover-sessions.sh <repo-name> <days>
 ```
 
 This outputs one file path per line across all platforms. To restrict to a single platform: `--platform claude|codex|cursor`. Pass the output to the metadata script with `--cwd-filter` to filter Codex sessions by repo name:
 
 ```bash
-bash <script-dir>/prompts:discover-sessions.sh <repo-name> <days> | tr '\n' '\0' | xargs -0 python3 <script-dir>/prompts:extract-metadata.py --cwd-filter <repo-name>
+bash <script-dir>/discover-sessions.sh <repo-name> <days> | tr '\n' '\0' | xargs -0 python3 <script-dir>/extract-metadata.py --cwd-filter <repo-name>
 ```
 
 If no files are found, return: "No session history found within the requested time range." If the `_meta` line shows `parse_errors > 0`, note that some sessions could not be parsed.
@@ -150,7 +150,7 @@ From the remaining sessions, select the most relevant (typically 2-5 total acros
 
 For each selected session, run the skeleton extraction script. Pipe the output through `head -200` to cap the skeleton at 200 lines per session. Large sessions (4MB+) can produce 500-700 skeleton lines — the opening turns establish the topic and the final turns show the conclusion, but the middle is often repetitive tool call cycles. 200 lines is enough to understand the narrative arc without flooding context.
 
-If the truncated skeleton doesn't cover the session's conclusion, extract the tail separately: `cat <file> | python3 <script-dir>/prompts:extract-skeleton.py | tail -50`.
+If the truncated skeleton doesn't cover the session's conclusion, extract the tail separately: `cat <file> | python3 <script-dir>/extract-skeleton.py | tail -50`.
 
 ### Step 5: Extract error signals (selective)
 

@@ -20,7 +20,7 @@ gh pr view <PR_NUMBER> --json reviews,comments --jq '.reviews[].body, .comments[
 ```
 
 ```
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/prompts:comments --jq '.[] | {path: .path, line: .line, body: .body, created_at: .created_at, user: .user.login}'
+gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments --jq '.[] | {path: .path, line: .line, body: .body, created_at: .created_at, user: .user.login}'
 ```
 
 If the PR has no prior review comments, return an empty findings array immediately. Do not invent findings.
