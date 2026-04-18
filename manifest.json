@@ -1,7 +1,7 @@
 {
   "generator": "bun run src/index.ts install ./plugins/compound-engineering --to codex",
-  "generatedAt": "2026-04-17T03:25:10Z",
+  "generatedAt": "2026-04-18T03:24:04Z",
   "upstreamRepo": "EveryInc/compound-engineering-plugin",
   "upstreamRef": "main",
-  "upstreamCommit": "1995e3d7907864130e5c1ce9cda2e531d81659cf"
+  "upstreamCommit": "7924f5ccc9cf0cc3cb8bcd4aadf9b51e3a1af099"
 }
